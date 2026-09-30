@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ClassLibrary1/BasicRouter.csproj" />
+  <Project Path="Test/Test.csproj" />
+</Solution>
