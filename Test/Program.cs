@@ -1,5 +1,7 @@
-﻿using BasicRouter;
+﻿using BasicServer;
 
-var server = new BasicRouter.ServerBuild(null);
+Router router = new Router(typeof(Program).Assembly);
+
+var server = new ServerBuild(9090,router);
 
 await server.StartServer();

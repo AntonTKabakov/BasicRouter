@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\ClassLibrary1\BasicRouter.csproj" />
+	  <ProjectReference Include="..\BasicServer\BasicServer.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Properties\" />
