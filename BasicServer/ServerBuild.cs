@@ -45,23 +45,48 @@ public class ServerBuild
 
             string body = await reader.ReadToEndAsync();
 
+            var query = context.Request.QueryString
+                .AllKeys
+                .Where(x => x != null)
+                .ToDictionary(
+                    x => x!,
+                    x => context.Request.QueryString[x]!
+                );
+
+
             var requestRouter = new Request
             {
                 Body = body,
                 Method = request.HttpMethod,
                 Path = path,
+                Query = query
             };
 
             requestRouter.readRequest();
+            var route = _router.Resolve(requestRouter);
 
-            var responseR = _router.GetController(requestRouter);
-            string response = path switch
+
+            if (route == null)
             {
-                "/" => "Home Page",
-                "/about" => "About Page",
-                var p when p == $"/{responseR}" => responseR,
-                _ => "404"
-            };
+                context.Response.StatusCode = 404;
+
+                var notFound = Encoding.UTF8.GetBytes("404 Not Found");
+
+                await context.Response.OutputStream.WriteAsync(notFound);
+                context.Response.Close();
+
+                continue;
+            }
+
+            route.Print();
+
+            var controller = Activator.CreateInstance(route.ControllerType);
+
+            var result = route.Method.Invoke(controller, null);
+
+            Console.WriteLine(result);
+
+            string response = result?.ToString() ?? "";
 
             var buffer = Encoding.UTF8.GetBytes(response);
 

@@ -5,7 +5,25 @@ using BasicServer;
 
 namespace Test
 {
-    internal class AaaController : BaseController
+    [Route("/app/[controller]/[action]")]
+    public class UsersController : BaseController
     {
+        [HttpGet]
+        public string GetUsers()
+        {
+            return "Users";
+        }
+
+        [HttpGet("profile")]
+        public string Profile()
+        {
+            return "Profile";
+        }
+
+        [HttpPost]
+        public string Create()
+        {
+            return "Created user";
+        }
     }
 }
