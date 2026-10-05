@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 
 namespace BasicServer;
@@ -20,7 +21,7 @@ public class ServerBuild
 
     private readonly HttpListener _listener = new HttpListener();
     private readonly int _port = 8080;
-
+    private readonly ParameterBinder _binder = new();
     private readonly Router _router;
 
     public async Task StartServer()
@@ -82,7 +83,9 @@ public class ServerBuild
 
             var controller = Activator.CreateInstance(route.ControllerType);
 
-            var result = route.Method.Invoke(controller, null);
+            var args = _binder.Bind(route.Method, requestRouter);
+
+            var result = route.Method.Invoke(controller, args);
 
             Console.WriteLine(result);
 

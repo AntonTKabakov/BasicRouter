@@ -125,13 +125,14 @@ public class Router
         string controllerRoute,
         string methodRoute)
     {
+
         if (!controllerRoute.Contains("[controller]") ||
             !controllerRoute.Contains("[action]"))
         {
             throw new FormatException();
         }
 
-        if (controllerRoute[1] != '/')
+        if (controllerRoute[0] != '/')
         {
             controllerRoute = $"/{controllerRoute}";
         }

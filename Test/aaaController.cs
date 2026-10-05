@@ -15,9 +15,9 @@ namespace Test
         }
 
         [HttpGet("profile")]
-        public string Profile()
+        public string Profile([FromQuery] int a)
         {
-            return "Profile";
+            return "Profile" + a;
         }
 
         [HttpPost]

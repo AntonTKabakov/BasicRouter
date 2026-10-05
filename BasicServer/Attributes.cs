@@ -47,3 +47,8 @@ public class HttpPutAttribute : HttpMethodAttribute
     {
     }
 }
+
+[AttributeUsage(AttributeTargets.Parameter)]
+public class FromQueryAttribute : Attribute
+{
+}
