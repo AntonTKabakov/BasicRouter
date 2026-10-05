@@ -8,16 +8,16 @@ namespace Test
     [Route("/app/[controller]/[action]")]
     public class UsersController : BaseController
     {
-        [HttpGet]
+        [HttpGet("aa")]
         public string GetUsers()
         {
             return "Users";
         }
 
         [HttpGet("profile")]
-        public string Profile([FromQuery] int a)
+        public HttpResult Profile([FromQuery] int a)
         {
-            return "Profile" + a;
+            return Results.Ok("Profile" + a);
         }
 
         [HttpPost]

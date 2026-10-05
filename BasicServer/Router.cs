@@ -139,8 +139,16 @@ public class Router
 
         controllerName = controllerName.Replace("Controller", "").ToLower();
 
-        return controllerRoute.Replace("[controller]", controllerName)
+        controllerRoute = controllerRoute.Replace("[controller]", controllerName)
             .Replace("[action]", methodRoute);
+
+        if (controllerRoute[^1] == '/')
+        {
+            controllerRoute = controllerRoute
+                .Substring(0, controllerRoute.Length - 1);
+        }
+
+        return controllerRoute;
     }
 
 

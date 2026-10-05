@@ -2,6 +2,7 @@
 using System.Numerics;
 using System.Reflection;
 using System.Text;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BasicServer;
 
@@ -69,12 +70,11 @@ public class ServerBuild
 
             if (route == null)
             {
-                context.Response.StatusCode = 404;
-
-                var notFound = Encoding.UTF8.GetBytes("404 Not Found");
-
-                await context.Response.OutputStream.WriteAsync(notFound);
-                context.Response.Close();
+                await SendResponse(context, new HttpResult
+                {
+                    Body = "Not Found",
+                    StatusCode = 404
+                });
 
                 continue;
             }
@@ -85,18 +85,66 @@ public class ServerBuild
 
             var args = _binder.Bind(route.Method, requestRouter);
 
-            var result = route.Method.Invoke(controller, args);
+            if (!args.Success)
+            {
+                await SendResponse(context, new HttpResult
+                {
+                    Body = "Unprocessable Entity",
+                    StatusCode = 422
+                });
 
-            Console.WriteLine(result);
+                continue;
+            }
 
-            string response = result?.ToString() ?? "";
+            var result = route.Method.Invoke(controller, args.Arguments);
 
-            var buffer = Encoding.UTF8.GetBytes(response);
+            if (result == null)
+            {
+                await SendResponse(context, new HttpResult
+                {
+                    Body = "No Content",
+                    StatusCode = 204
+                });
 
-            context.Response.ContentLength64 = buffer.Length;
-            await context.Response.OutputStream.WriteAsync(buffer);
-            context.Response.Close();
+                continue;
+            }
+
+            if (result is HttpResult httpResult)
+            {
+                await SendResponse(context, httpResult);
+            }
+            else if (result is string text)
+            {
+                await SendResponse(context, new HttpResult
+                {
+                    Body = text,
+                    StatusCode = 200
+                });
+            }
+            else
+            {
+                await SendResponse(context, new HttpResult
+                {
+                    Body = "Unsupported return type",
+                    StatusCode = 500
+                });
+            }
         }
+    }
+
+    private async Task SendResponse(
+        HttpListenerContext context,
+        HttpResult result
+        )
+    {
+
+        context.Response.StatusCode = result.StatusCode;
+
+        var buffer = Encoding.UTF8.GetBytes(result.Body);
+
+        context.Response.ContentLength64 = buffer.Length;
+        await context.Response.OutputStream.WriteAsync(buffer);
+        context.Response.Close();
     }
 
 }

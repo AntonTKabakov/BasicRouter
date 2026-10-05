@@ -2,9 +2,23 @@
 
 namespace BasicServer;
 
+public class BindingResult
+{
+    public bool Success { get; set; }
+
+    public object?[] Arguments { get; set; } = [];
+}
+
+internal class ParameterResult
+{
+    public bool Success { get; set; }
+
+    public object? Value { get; set; }
+}
+
 public class ParameterBinder
 {
-    public object?[] Bind(MethodInfo method, Request request)
+    public BindingResult Bind(MethodInfo method, Request request)
     {
         var parameters = method.GetParameters();
 
@@ -12,13 +26,27 @@ public class ParameterBinder
 
         for (int i = 0; i < parameters.Length; i++)
         {
-            args[i] = BindParameter(parameters[i], request);
+            var parameterResult = BindParameter(parameters[i], request);
+
+            if (!parameterResult.Success)
+            {
+                return new BindingResult
+                {
+                    Success = false
+                };
+            }
+
+            args[i] = parameterResult.Value;
         }
 
-        return args;
+        return new BindingResult
+        {
+            Success = true,
+            Arguments = args
+        };
     }
 
-    private object? BindParameter(
+    private ParameterResult BindParameter(
         ParameterInfo parameter,
         Request request)
     {
@@ -27,60 +55,79 @@ public class ParameterBinder
             return BindFromQuery(parameter, request);
         }
 
-        return GetDefaultValue(parameter.ParameterType);
+        return new ParameterResult
+        {
+            Success = true,
+            Value = GetDefaultValue(parameter.ParameterType)
+        };
     }
 
-    private object? BindFromQuery(
+    private ParameterResult BindFromQuery(
         ParameterInfo parameter,
         Request request)
     {
         if (parameter.ParameterType == typeof(Dictionary<string, string>))
         {
-            return request.Query;
+            return new ParameterResult
+            {
+                Success = true,
+                Value = request.Query
+            };
         }
 
         if (!request.Query.TryGetValue(parameter.Name!, out var value))
         {
-            throw new Exception(
-                $"Missing query parameter '{parameter.Name}'");
+            return new ParameterResult
+            {
+                Success = false
+            };
         }
 
         return ConvertToType(value, parameter.ParameterType);
     }
 
-    private object? ConvertToType(
+    private ParameterResult ConvertToType(
         string value,
         Type type)
     {
         try
         {
             if (type == typeof(string))
-                return value;
+                return Success(value);
 
             if (type == typeof(int))
-                return int.Parse(value);
+                return Success(int.Parse(value));
 
             if (type == typeof(long))
-                return long.Parse(value);
+                return Success(long.Parse(value));
 
             if (type == typeof(bool))
-                return bool.Parse(value);
+                return Success(bool.Parse(value));
 
             if (type == typeof(double))
-                return double.Parse(value);
+                return Success(double.Parse(value));
 
             if (type == typeof(Guid))
-                return Guid.Parse(value);
+                return Success(Guid.Parse(value));
 
-            return Convert.ChangeType(value, type);
+            return Success(Convert.ChangeType(value, type));
         }
-        catch (Exception e)
+        catch
         {
-            Console.WriteLine(e);
-            return new object();
+            return new ParameterResult
+            {
+                Success = false
+            };
         }
-       
+    }
 
+    private static ParameterResult Success(object? value)
+    {
+        return new ParameterResult
+        {
+            Success = true,
+            Value = value
+        };
     }
 
     private object? GetDefaultValue(Type type)
@@ -91,3 +138,4 @@ public class ParameterBinder
         return Activator.CreateInstance(type);
     }
 }
+
