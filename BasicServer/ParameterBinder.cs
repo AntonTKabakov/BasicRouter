@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Text.Json;
 
 namespace BasicServer;
 
@@ -9,7 +10,7 @@ public class BindingResult
     public object?[] Arguments { get; set; } = [];
 }
 
-internal class ParameterResult
+public class ParameterResult
 {
     public bool Success { get; set; }
 
@@ -21,14 +22,13 @@ public class ParameterBinder
     public BindingResult Bind(MethodInfo method, Request request)
     {
         var parameters = method.GetParameters();
-
         var args = new object?[parameters.Length];
 
         for (int i = 0; i < parameters.Length; i++)
         {
-            var parameterResult = BindParameter(parameters[i], request);
+            var result = BindParameter(parameters[i], request);
 
-            if (!parameterResult.Success)
+            if (!result.Success)
             {
                 return new BindingResult
                 {
@@ -36,7 +36,7 @@ public class ParameterBinder
                 };
             }
 
-            args[i] = parameterResult.Value;
+            args[i] = result.Value;
         }
 
         return new BindingResult
@@ -55,6 +55,11 @@ public class ParameterBinder
             return BindFromQuery(parameter, request);
         }
 
+        if (parameter.GetCustomAttribute<FromBodyAttribute>() != null)
+        {
+            return BindFromBody(parameter, request);
+        }
+
         return new ParameterResult
         {
             Success = true,
@@ -68,22 +73,98 @@ public class ParameterBinder
     {
         if (parameter.ParameterType == typeof(Dictionary<string, string>))
         {
-            return new ParameterResult
-            {
-                Success = true,
-                Value = request.Query
-            };
+            return Success(request.Query);
         }
 
-        if (!request.Query.TryGetValue(parameter.Name!, out var value))
+        if (IsSimpleType(parameter.ParameterType))
         {
-            return new ParameterResult
+            if (!request.Query.TryGetValue(parameter.Name!, out var value))
             {
-                Success = false
-            };
+                return Failure();
+            }
+
+            return ConvertToType(value, parameter.ParameterType);
         }
 
-        return ConvertToType(value, parameter.ParameterType);
+        try
+        {
+            var instance = Activator.CreateInstance(parameter.ParameterType);
+
+            if (instance == null)
+            {
+                return Failure();
+            }
+
+            var properties = parameter.ParameterType.GetProperties();
+
+            foreach (var property in properties)
+            {
+                if (!property.CanWrite)
+                    continue;
+
+                if (!request.Query.TryGetValue(
+                        property.Name,
+                        out var value))
+                {
+                    continue;
+                }
+
+                var converted = ConvertToType(
+                    value,
+                    property.PropertyType);
+
+                if (!converted.Success)
+                {
+                    return Failure();
+                }
+
+                property.SetValue(instance, converted.Value);
+            }
+
+            return Success(instance);
+        }
+        catch
+        {
+            return Failure();
+        }
+    }
+
+    private bool IsSimpleType(Type type)
+    {
+        return type == typeof(string)
+               || type == typeof(int)
+               || type == typeof(long)
+               || type == typeof(bool)
+               || type == typeof(double)
+               || type == typeof(Guid)
+               || type.IsEnum;
+    }
+
+    private ParameterResult BindFromBody(
+        ParameterInfo parameter,
+        Request request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Body))
+        {
+            return Failure();
+        }
+
+        try
+        {
+            var value = JsonSerializer.Deserialize(
+                request.Body,
+                parameter.ParameterType,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+            return Success(value);
+        }
+        catch (JsonException)
+        {
+            return Failure();
+        }
     }
 
     private ParameterResult ConvertToType(
@@ -114,10 +195,7 @@ public class ParameterBinder
         }
         catch
         {
-            return new ParameterResult
-            {
-                Success = false
-            };
+            return Failure();
         }
     }
 
@@ -130,6 +208,14 @@ public class ParameterBinder
         };
     }
 
+    private static ParameterResult Failure()
+    {
+        return new ParameterResult
+        {
+            Success = false
+        };
+    }
+
     private object? GetDefaultValue(Type type)
     {
         if (!type.IsValueType)
@@ -138,4 +224,3 @@ public class ParameterBinder
         return Activator.CreateInstance(type);
     }
 }
-

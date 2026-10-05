@@ -48,7 +48,26 @@ public class HttpPutAttribute : HttpMethodAttribute
     }
 }
 
+public class HttpDeleteAttribute : HttpMethodAttribute
+{
+    public HttpDeleteAttribute(string path = "") : base(path)
+    {
+    }
+}
+
+public class HttpPatchAttribute : HttpMethodAttribute
+{
+    public HttpPatchAttribute(string path = "") : base(path)
+    {
+    }
+}
+
 [AttributeUsage(AttributeTargets.Parameter)]
 public class FromQueryAttribute : Attribute
+{
+}
+
+[AttributeUsage(AttributeTargets.Parameter)]
+public class FromBodyAttribute : Attribute
 {
 }

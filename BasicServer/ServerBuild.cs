@@ -36,33 +36,7 @@ public class ServerBuild
         {
             var context = await _listener.GetContextAsync();
 
-            var path = context.Request.Url!.AbsolutePath;
-
-            var request = context.Request;
-
-            using var reader = new StreamReader(
-                request.InputStream,
-                request.ContentEncoding
-            );
-
-            string body = await reader.ReadToEndAsync();
-
-            var query = context.Request.QueryString
-                .AllKeys
-                .Where(x => x != null)
-                .ToDictionary(
-                    x => x!,
-                    x => context.Request.QueryString[x]!
-                );
-
-
-            var requestRouter = new Request
-            {
-                Body = body,
-                Method = request.HttpMethod,
-                Path = path,
-                Query = query
-            };
+            var requestRouter = await GetRequest(context);
 
             requestRouter.readRequest();
             var route = _router.Resolve(requestRouter);
@@ -130,6 +104,37 @@ public class ServerBuild
                 });
             }
         }
+    }
+
+    private async Task<Request> GetRequest(HttpListenerContext context)
+    {
+        var path = context.Request.Url!.AbsolutePath;
+
+        var request = context.Request;
+
+        using var reader = new StreamReader(
+            request.InputStream,
+            request.ContentEncoding
+        );
+
+        string body = await reader.ReadToEndAsync();
+
+        var query = context.Request.QueryString
+            .AllKeys
+            .Where(x => x != null)
+            .ToDictionary(
+                x => x!,
+                x => context.Request.QueryString[x]!,
+                StringComparer.OrdinalIgnoreCase
+            );
+
+        return new Request
+        {
+            Body = body,
+            Method = request.HttpMethod,
+            Path = path,
+            Query = query
+        };
     }
 
     private async Task SendResponse(

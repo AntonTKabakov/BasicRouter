@@ -1,7 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using BasicServer;
+﻿using BasicServer;
+
+public class CreateUserRequest
+{
+    public int A { get; set; }
+    public int B { get; set; }
+}
 
 namespace Test
 {
@@ -15,15 +18,15 @@ namespace Test
         }
 
         [HttpGet("profile")]
-        public HttpResult Profile([FromQuery] int a)
+        public HttpResult Profile([FromQuery] CreateUserRequest request)
         {
-            return Results.Ok("Profile" + a);
+            return Results.Ok("Profile" + request.A + request.B);
         }
 
         [HttpPost]
-        public string Create()
+        public HttpResult Create([FromBody] CreateUserRequest request)
         {
-            return "Created user";
+            return Results.Ok("Created user " + request.A);
         }
     }
 }
