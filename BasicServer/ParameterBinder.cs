@@ -3,23 +3,23 @@ using System.Text.Json;
 
 namespace BasicServer;
 
-public class BindingResult
+internal class BindingResult
 {
     public bool Success { get; set; }
 
     public object?[] Arguments { get; set; } = [];
 }
 
-public class ParameterResult
+internal class ParameterResult
 {
     public bool Success { get; set; }
 
     public object? Value { get; set; }
 }
 
-public class ParameterBinder
+internal class ParameterBinder
 {
-    public BindingResult Bind(MethodInfo method, Request request)
+    internal BindingResult Bind(MethodInfo method, Request request)
     {
         var parameters = method.GetParameters();
         var args = new object?[parameters.Length];
